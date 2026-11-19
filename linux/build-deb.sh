@@ -86,8 +86,8 @@ Section: graphics
 Priority: optional
 Architecture: all
 Installed-Size: $SIZE
-Depends: python3 (>= 3.6), python3-gi, gir1.2-gtk-3.0, python3-cairo
-Recommends: pulseaudio-utils | alsa-utils, mpg123
+Depends: python3 (>= 3.6), python3-gi, python3-gi-cairo, gir1.2-gtk-3.0, python3-cairo
+Recommends: python3-numpy, pulseaudio-utils | alsa-utils, mpg123
 Maintainer: Liangzaigrape <2817680489@qq.com>
 Homepage: https://github.com/Liangzaigrape/naiwa-desktop-pet
 Description: 奶蛙桌宠（Linux/麒麟 移植版）
