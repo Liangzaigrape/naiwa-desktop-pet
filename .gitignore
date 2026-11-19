@@ -57,3 +57,7 @@ linux/.build/
 linux/dist/
 __pycache__/
 *.pyc
+
+# 上游 .gitignore 里的 bin/ 和 tools/ 会误伤 Linux 移植版的目录，这里放行
+!linux/package/usr/bin/
+!linux/tools/

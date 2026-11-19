@@ -1,0 +1,13 @@
+#!/bin/sh
+# 奶蛙桌宠 启动脚本（.deb 安装后位于 /usr/bin/naiwa-pet）
+set -e
+export PYTHONPATH="/usr/lib/naiwa-pet${PYTHONPATH:+:$PYTHONPATH}"
+export PYTHONIOENCODING="utf-8"
+
+# 透明异形窗口依赖 X11；Wayland 桌面下走 XWayland 才能保证效果。
+# 如果确认要在原生 Wayland 下运行（可能没有透明/穿透），设 NAIWA_BACKEND=wayland
+if [ "${NAIWA_BACKEND:-x11}" = "x11" ]; then
+    export GDK_BACKEND="x11"
+fi
+
+exec /usr/bin/python3 -m naiwa "$@"
