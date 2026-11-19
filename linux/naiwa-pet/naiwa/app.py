@@ -216,6 +216,11 @@ class ControlServer(object):
         try:
             self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
             self.sock.bind(self.path)
+            # 只允许本用户读写这个控制 socket
+            try:
+                os.chmod(self.path, 0o600)
+            except OSError:
+                pass
             self.sock.listen(4)
             self.sock.setblocking(False)
             import gi
@@ -226,12 +231,25 @@ class ControlServer(object):
         except OSError:
             return False
 
+    @staticmethod
+    def _peer_uid(conn):
+        """取对端 uid；不是本用户就直接拒绝（仅 Linux 有 SO_PEERCRED）。"""
+        try:
+            import struct
+            raw = conn.getsockopt(socket.SOL_SOCKET, socket.SO_PEERCRED, struct.calcsize("3i"))
+            _pid, uid, _gid = struct.unpack("3i", raw)
+            return uid
+        except (OSError, AttributeError):
+            return os.getuid()
+
     def _on_readable(self, _fd, _cond):
         try:
             conn, _addr = self.sock.accept()
         except OSError:
             return True
         try:
+            if self._peer_uid(conn) != os.getuid():
+                return True
             conn.settimeout(0.5)
             data = conn.recv(1024).decode("utf-8", "replace").strip()
             conn.sendall((self._handle(data) + "\n").encode("utf-8"))

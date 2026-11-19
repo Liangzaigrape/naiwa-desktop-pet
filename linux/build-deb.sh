@@ -14,13 +14,13 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(cd "$HERE/.." && pwd)"
 ASSETS="${1:-$ROOT}"
 VERSION="${VERSION:-2.5.1}"
-REVISION="${REVISION:-linux.1}"
+REVISION="${REVISION:-linux.2}"
 PKGVER="${VERSION}-${REVISION}"
 DIST="$HERE/dist"
 BUILD="$HERE/.build"
 STAGE="$BUILD/stage"
 
-REQUIRED="素材.nwp walk.nwp hold.nwp head.nwp seq.nwp dance.nwp hunger.nwp fat.nwp rest.nwp rest2.nwp sad.nwp idle_gif.nwp drag.nwp feed.nwp 原版笑声.wav cry.wav dance.mp3"
+REQUIRED="素材.nwp walk.nwp hold.nwp head.nwp seq.nwp dance.nwp hunger.nwp fat.nwp rest.nwp rest2.nwp sad.nwp idle_gif.nwp drag.nwp feed.nwp 原版笑声.wav cry.wav"
 
 die() { echo "错误：$*" >&2; exit 1; }
 
@@ -47,6 +47,29 @@ install -d "$STAGE/usr/share/naiwa-pet"
 for f in $REQUIRED; do
     install -m 0644 "$ASSETS/$f" "$STAGE/usr/share/naiwa-pet/$f"
 done
+
+# 上游的 dance.mp3 其实是 MP4（手机录屏改名，HEVC+AAC），paplay/aplay/mpg123 都放不了；
+# 而且它有 18 MB。这里只把音轨转成 22.05kHz 单声道 WAV（约 0.8 MB），原始 mp4 不入包。
+echo "== 处理舞曲（dance.mp3 实为 MP4，只保留音轨） =="
+if command -v ffmpeg >/dev/null 2>&1; then
+    if python3 "$HERE/tools/fix_dance_audio.py" "$ASSETS/dance.mp3" "$BUILD/dance.wav"; then
+        install -m 0644 "$BUILD/dance.wav" "$STAGE/usr/share/naiwa-pet/dance.wav"
+    else
+        echo "  警告：转换失败，跳舞将没有音效"
+    fi
+else
+    echo "  警告：没装 ffmpeg，跳过舞曲（跳舞会静音）；建议 sudo apt install ffmpeg 再打包"
+fi
+
+# 素材瘦身：0.45 倍分辨率 + RGB 减色（alpha 仍是 8 位，边缘不会锯齿），
+# 体积从 167 MB 降到 ~38 MB。要出全画质包就 SLIM=0。
+if [ "${SLIM:-1}" != "0" ]; then
+    echo "== 素材瘦身（SLIM=0 可关闭） =="
+    python3 "$HERE/tools/slim_assets.py" "$STAGE/usr/share/naiwa-pet" \
+        --scale "${SLIM_SCALE:-0.45}" --colors "${SLIM_COLORS:-192}" --no-backup
+else
+    echo "== 跳过素材瘦身（全画质） =="
+fi
 
 echo "== 桌面文件 / 图标 =="
 install -d "$STAGE/usr/share/applications"
@@ -129,7 +152,7 @@ echo "== md5sums =="
 echo "== 构建 deb =="
 chmod 0644 "$STAGE/DEBIAN/control" "$STAGE/DEBIAN/md5sums"
 find "$STAGE" -type d -exec chmod 0755 {} +
-DEB="$DIST/naiwa-pet_${VERSION}_linux.1_all.deb"
+DEB="$DIST/naiwa-pet_${VERSION}_${REVISION}_all.deb"
 # 素材是已压缩的 PNG，xz 收益极小但很慢，所以用 gzip
 dpkg-deb --root-owner-group -Zgzip -z9 --build "$STAGE" "$DEB"
 echo "deb -> $DEB"
@@ -138,11 +161,9 @@ echo "== 构建免安装包 =="
 PORT="$BUILD/portable/naiwa-pet"
 mkdir -p "$PORT/naiwa" "$PORT/share"
 cp -f "$HERE"/naiwa-pet/naiwa/*.py "$PORT/naiwa/"
-for f in $REQUIRED; do
-    cp -f "$ASSETS/$f" "$PORT/share/$f"
-done
-cp -f "$STAGE/usr/share/naiwa-pet/使用说明.txt" "$PORT/share/" 2>/dev/null || true
-cp -f "$STAGE/usr/share/icons/hicolor/256x256/apps/naiwa-pet.png" "$PORT/share/naiwa-pet.png"
+# 直接复用已经处理过（瘦身 + 转码）的暂存目录，保证两种分发包内容一致
+cp -f "$STAGE/usr/share/naiwa-pet/"* "$PORT/share/"
+# desktop 文件里的 Exec 指向免安装路径
 cat > "$PORT/naiwa-pet" <<'EOF'
 #!/bin/sh
 HERE="$(cd "$(dirname "$0")" && pwd)"
@@ -165,7 +186,7 @@ cat > "$PORT/README.txt" <<'EOF'
 EOF
 sed "s#Exec=naiwa-pet#Exec=$PORT/naiwa-pet#" \
     "$HERE/package/usr/share/applications/naiwa-pet.desktop" > "$PORT/naiwa-pet.desktop"
-TAR="$DIST/naiwa-pet_${VERSION}_linux.1_portable.tar.gz"
+TAR="$DIST/naiwa-pet_${VERSION}_${REVISION}_portable.tar.gz"
 tar -C "$BUILD/portable" -czf "$TAR" naiwa-pet
 echo "portable -> $TAR"
 

@@ -14,16 +14,17 @@
 
 | 文件 | 适用场景 |
 |---|---|
-| `naiwa-pet_2.5.1_linux.1_all.deb` | **推荐**。`sudo dpkg -i` 装上，应用菜单里出现「奶蛙桌宠」 |
-| `naiwa-pet_2.5.1_linux.1_portable.tar.gz` | 单位电脑没有 sudo 权限时用：解压到自己的家目录直接运行 |
+| `naiwa-pet_2.5.1_linux.2_all.deb` | **推荐**。`sudo dpkg -i` 装上，应用菜单里出现「奶蛙桌宠」 |
+| `naiwa-pet_2.5.1_linux.2_portable.tar.gz` | 单位电脑没有 sudo 权限时用：解压到自己的家目录直接运行 |
 
 deb 是 **Architecture: all**（纯 Python，无编译产物），x86_64 和 ARM64 的麒麟都能装；
-素材和状态机与原版一致，包内已带全部素材（约 180 MB）。
+**安装包约 40 MB**。素材为了压体积做了降采样（0.45 倍 + 192 色，alpha 保持 8 位），
+默认 80% 大小下与原画质几乎无差别；要全画质就 `SLIM=0 bash linux/build-deb.sh` 自己打。
 
 ### 1.1 安装 deb
 
 ```bash
-sudo dpkg -i naiwa-pet_2.5.1_linux.1_all.deb
+sudo dpkg -i naiwa-pet_2.5.1_linux.2_all.deb
 # 若提示缺依赖（极少数精简系统）：
 sudo apt-get -f install
 ```
@@ -41,7 +42,7 @@ sudo apt-get -f install
 ### 1.2 免安装版
 
 ```bash
-tar xzf naiwa-pet_2.5.1_linux.1_portable.tar.gz -C ~/
+tar xzf naiwa-pet_2.5.1_linux.2_portable.tar.gz -C ~/
 ~/naiwa-pet/naiwa-pet        # 直接运行
 ```
 
@@ -110,10 +111,13 @@ python3 linux/tools/extract_assets.py /tmp/portable.zip ~/naiwa-assets
 #    把仓库自带的素材也复制过去，凑成完整的一套
 cp -n *.nwp *.wav ~/naiwa-assets/
 
-# 3) 打包（需要 dpkg-deb、python3-gi；图标是用 GdkPixbuf 现场生成的）
+# 3) 打包（需要 dpkg-deb、python3-gi、pillow；图标用 GdkPixbuf 现场生成）
+#    默认会做素材瘦身（0.45 倍 + 192 色），并调用 ffmpeg 把舞曲转成 wav
 bash linux/build-deb.sh ~/naiwa-assets
-# 产物：linux/dist/naiwa-pet_2.5.1_linux.1_all.deb
-#       linux/dist/naiwa-pet_2.5.1_linux.1_portable.tar.gz
+# 想打全画质包（体积回到 ~180 MB）：
+#   SLIM=0 bash linux/build-deb.sh ~/naiwa-assets
+# 产物：linux/dist/naiwa-pet_2.5.1_linux.2_all.deb
+#       linux/dist/naiwa-pet_2.5.1_linux.2_portable.tar.gz
 ```
 
 构建脚本做三件事：把 `linux/naiwa-pet/` 装到 `/usr/lib/naiwa-pet/`、素材装到
@@ -181,6 +185,10 @@ linux/
   里是菜单内嵌 `Gtk.Scale`，另外加了滚轮直接调音量。
 * 全屏隐藏的判定依赖 `_NET_WM_STATE_FULLSCREEN`，个别用 `override-redirect`
   做全屏的播放器可能检测不到。
+* **舞曲 `dance.mp3` 其实是 MP4**（手机录屏改名，HEVC 视频 + AAC 音频）。
+  `paplay` / `aplay` / `mpg123` 都放不了它，所以打包时用 `ffmpeg` 把音轨转成
+  `dance.wav` 一起装（运行时优先用 wav）。没装 ffmpeg 打出来的包跳舞会静音，
+  但不影响画面和其它音效。
 
 ---
 

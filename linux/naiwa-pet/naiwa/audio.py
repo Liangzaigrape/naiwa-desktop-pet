@@ -1,26 +1,49 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""声音播放：优先 PulseAudio/ALSA，缺什么就静音不报错。"""
+"""声音播放：按文件格式挑播放器，缺什么就静音不报错。
+
+注意：上游 release 里的 `dance.mp3` 其实是 **MP4 容器**（HEVC 视频 + AAC 音频，
+手机录屏改名而来），paplay / aplay / mpg123 都放不了它，只有 ffplay / vlc 能放。
+所以打包时会把它的音轨转成真正的 `dance.wav`，运行时优先用 wav。
+"""
 import os
 import shutil
 import subprocess
 
-_PROGRAMS = [
-    # (命令, 是否支持音量参数, 构造参数)
-    ("paplay", "volume"),
-    ("aplay", "aplay"),
-    ("mpg123", "mpg123"),
-    ("ffplay", "ffplay"),
-    ("cvlc", "none"),
-]
+_KINDS = {
+    "paplay": "volume",
+    "aplay": "aplay",
+    "mpg123": "mpg123",
+    "ffplay": "ffplay",
+    "cvlc": "none",
+}
+
+# 每种格式的播放器优先级（先找谁先试谁）
+_ORDER = {
+    ".wav": ["paplay", "aplay", "ffplay", "cvlc"],
+    ".mp3": ["mpg123", "ffplay", "cvlc", "paplay"],
+    ".ogg": ["paplay", "ffplay", "cvlc"],
+    ".flac": ["paplay", "ffplay", "cvlc"],
+    ".m4a": ["ffplay", "cvlc"],
+    ".mp4": ["ffplay", "cvlc"],
+}
 
 
-def _which(programs):
-    for prog, kind in programs:
-        path = shutil.which(prog)
-        if path:
-            return path, kind
+def _pick(path):
+    fmt = os.path.splitext(path)[1].lower()
+    for prog in _ORDER.get(fmt, ["ffplay", "cvlc"]):
+        found = shutil.which(prog)
+        if found:
+            return found, _KINDS[prog]
     return None, None
+
+
+def _any_player():
+    for progs in _ORDER.values():
+        for prog in progs:
+            if shutil.which(prog):
+                return prog
+    return None
 
 
 class Player(object):
@@ -37,7 +60,7 @@ class Player(object):
             # paplay: 65536 == 100%
             return [path, "--volume=%d" % int(self.volume * 655.36)]
         if kind == "aplay":
-            # aplay 没有音量选项，用 softvol 会报错；仅当非 100% 时提示不可控
+            # aplay 没有音量参数（softvol 需要插件配置），靠系统音量
             return [path, "-q"]
         if kind == "mpg123":
             return [path, "-q", "-f", str(int(self.volume * 327.67))]
@@ -51,7 +74,7 @@ class Player(object):
             return False
         if not os.path.exists(filepath):
             return False
-        path, kind = _which(_PROGRAMS)
+        path, kind = _pick(filepath)
         if not path:
             return False
         args = self._args(path, kind)
@@ -93,5 +116,4 @@ class Player(object):
 
     @staticmethod
     def available():
-        path, _ = _which(_PROGRAMS)
-        return path is not None
+        return _any_player() is not None

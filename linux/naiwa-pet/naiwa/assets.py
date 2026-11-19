@@ -242,7 +242,10 @@ class Assets(object):
             self.packs[key] = FramePack(os.path.join(folder, name), key, cache_size=16)
         self.audio_laugh = os.path.join(folder, "原版笑声.wav")
         self.audio_cry = os.path.join(folder, "cry.wav")
-        self.audio_dance = os.path.join(folder, "dance.mp3")
+        # 上游的 dance.mp3 其实是 MP4（手机录屏改名），打包时转出的 dance.wav 优先
+        self.audio_dance = os.path.join(folder, "dance.wav")
+        if not os.path.exists(self.audio_dance):
+            self.audio_dance = os.path.join(folder, "dance.mp3")
         self._main_zip = None
         self._main_cache = OrderedDict()
         self._main_cache_size = 16

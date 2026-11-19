@@ -177,17 +177,21 @@ class PetWindow(Gtk.Window):
         self._in_shape_update = False
 
         # ---- 窗口属性
-        self.set_decorated(False)
+        # Wayland/WSLg 下没有「绝对定位」，无边框 + skip_taskbar 的窗口可能被合成器
+        # 直接忽略；NAIWA_PLAIN_WINDOW=1 时改用普通窗口，方便在 WSLg 里试玩。
+        plain = os.environ.get("NAIWA_PLAIN_WINDOW") == "1"
+        self.set_decorated(plain)
         self.set_title("naiwa-pet")
         self.set_resizable(False)
         self.set_app_paintable(True)
-        self.set_skip_taskbar_hint(True)
-        self.set_skip_pager_hint(True)
-        self.set_accept_focus(False)
-        self.set_focus_on_map(False)
-        self.set_keep_above(bool(self.settings.on_top))
-        self.set_type_hint(Gdk.WindowTypeHint.UTILITY)
-        self.stick()
+        self.set_skip_taskbar_hint(not plain)
+        self.set_skip_pager_hint(not plain)
+        self.set_accept_focus(plain)
+        self.set_focus_on_map(plain)
+        self.set_keep_above(bool(self.settings.on_top) and not plain)
+        self.set_type_hint(Gdk.WindowTypeHint.NORMAL if plain else Gdk.WindowTypeHint.UTILITY)
+        if not plain:
+            self.stick()
         screen = self.get_screen()
         visual = screen.get_rgba_visual()
         self._rgba = visual is not None
