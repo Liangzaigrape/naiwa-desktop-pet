@@ -1,0 +1,14 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=奶蛙桌宠
+Name[en]=Naiwa Desktop Pet
+GenericName=Desktop Pet
+Comment=透明异形窗口的桌面宠物：戳肚子会笑，可以拖着抛着玩
+Exec=naiwa-pet
+Icon=naiwa-pet
+Terminal=false
+Categories=Utility;Amusement;
+Keywords=pet;desktop;naiwa;桌宠;奶蛙;
+StartupNotify=false
+X-GNOME-Autostart-enabled=true

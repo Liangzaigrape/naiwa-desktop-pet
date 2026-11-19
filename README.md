@@ -17,6 +17,21 @@ C# WinForms 桌面宠物：透明异形窗口、无焦点不抢鼠标、多帧�
 
 ---
 
+## Linux / 麒麟 版本
+
+本仓库包含一个 Linux 移植版：`linux/`，用 **Python 3 + GTK3** 重写了窗口层与交互，
+素材格式（`.nwp`）与原版完全一致，可直接使用原版素材包。
+
+* 安装包：`naiwa-pet_2.5.1_linux.1_all.deb`（Architecture: all，x86_64 / ARM64 麒麟均可）
+* 免安装版：`naiwa-pet_2.5.1_linux.1_portable.tar.gz`
+* 说明文档：[linux/README-linux.md](linux/README-linux.md)
+
+```bash
+sudo dpkg -i naiwa-pet_2.5.1_linux.1_all.deb   # 应用菜单里会出现「奶蛙桌宠」
+```
+
+需要 X11 会话与桌面合成（麒麟 V10 默认满足）；Wayland 会话下启动脚本会走 XWayland。
+
 ## 功能特性
 
 - **透明异形窗口**：`UpdateLayeredWindow` 实现真正的透明异形窗口，窗口无边框、不抢焦点、不激活，按形状响应点击
