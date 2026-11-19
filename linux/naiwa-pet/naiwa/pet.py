@@ -290,6 +290,10 @@ class PetWindow(Gtk.Window):
         _c, ch2, _r, _p = self.renderer.layout(self.motion, self.settings.scale, self.edge_right)
         return ch2 // 2
 
+    def _bottom_margin(self):
+        """脚底离工作区底边留一点缝，避免贴着屏幕边缘看起来像被切掉。"""
+        return max(2, int(6 * self.settings.scale / 100.0))
+
     def _setup_position(self):
         if self.settings.position and abs(self.settings.x) < 100000:
             self._move_window(self.settings.x, self.settings.y)
@@ -300,7 +304,7 @@ class PetWindow(Gtk.Window):
         area = self._monitor_workarea()
         w, h = self._surface_width_height()
         x = area.x + area.width - w - 24
-        y = area.y + area.height - h
+        y = area.y + area.height - h - self._bottom_margin()
         self._move_window(x, y)
         self._keep_visible()
 
@@ -333,7 +337,7 @@ class PetWindow(Gtk.Window):
             y = max(area.y, min(y, area.y + area.height - h))
         else:
             x = max(area.x, min(x, area.x + area.width - w))
-            y = max(area.y, min(y, area.y + area.height - h))
+            y = max(area.y, min(y, area.y + area.height - h - self._bottom_margin()))
         self._move_window(x, y)
 
     def _apply_size(self, force=False):
@@ -645,7 +649,7 @@ class PetWindow(Gtk.Window):
         self.gravity_vy += 1500.0 * dt
         area = self._monitor_workarea()
         h = self._surface_size[1]
-        bottom = area.y + area.height - h
+        bottom = area.y + area.height - h - self._bottom_margin()
         x, y = self._win_pos()
         ny = y + self.gravity_vy * dt
         if ny <= area.y:
